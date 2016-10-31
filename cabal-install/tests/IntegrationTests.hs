@@ -12,9 +12,9 @@ import Distribution.Compat.CreatePipe (createPipe)
 import Distribution.Compat.Environment (setEnv, getEnvironment)
 import Distribution.Compat.Internal.TempFile (createTempDirectory)
 import Distribution.Simple.Configure (findDistPrefOrDefault)
-import Distribution.Simple.Program.Builtin (ghcPkgProgram)
+import Distribution.Simple.Program.Builtin (ghcPkgProgram, gccProgram, ghcProgram)
 import Distribution.Simple.Program.Db
-        (defaultProgramDb, requireProgram, setProgramSearchPath)
+        (defaultProgramDb, requireProgram, setProgramSearchPath, lookupProgramVersion)
 import Distribution.Simple.Program.Find
         (ProgramSearchPathEntry(ProgramSearchPathDir), defaultProgramSearchPath)
 import Distribution.Simple.Program.Types
@@ -22,6 +22,7 @@ import Distribution.Simple.Program.Types
 import Distribution.Simple.Setup ( Flag(..) )
 import Distribution.Simple.Utils ( findProgramVersion, copyDirectoryRecursive, installOrdinaryFile )
 import Distribution.Verbosity (normal)
+import Distribution.Version (anyVersion)
 
 -- Third party modules.
 import Control.Concurrent.Async (withAsync, wait)
@@ -285,15 +286,26 @@ main = do
   let programSearchPath = ProgramSearchPathDir buildDir : defaultProgramSearchPath
   (cabal, _) <- requireProgram normal cabalProgram (setProgramSearchPath programSearchPath defaultProgramDb)
   (ghcPkg, _) <- requireProgram normal ghcPkgProgram defaultProgramDb
+  -- (gcc, _) <- requireProgram normal gccProgram defaultProgramDb
   baseDirectory <- canonicalizePath $ "tests" </> "IntegrationTests"
   -- Set up environment variables for test scripts
   setEnv "GHC_PKG" $ programPath ghcPkg
   setEnv "CABAL" $ programPath cabal
+  --setEnv "GCC" $ programPath gcc
   -- Define default arguments
   setEnv "CABAL_ARGS" $ "--config-file=config-file"
   setEnv "CABAL_ARGS_NO_CONFIG_FILE" " "
   -- Don't get Unicode output from GHC
   setEnv "LC_ALL" "C"
+  -- Try to find something that can compile C programs
+  findGcc <- lookupProgramVersion normal gccProgram anyVersion defaultProgramDb
+  case findGcc of
+    Left _ -> do
+      -- set CC to GHC blabla
+      (ghc, _) <- requireProgram normal ghcProgram defaultProgramDb
+      setEnv "CCOMP" $ programPath ghc ++ " -no-hs-main"
+    Right (gcc, _, _) -> do
+      setEnv "CCOMP" (programPath gcc)
   -- Discover all the test categories
   categories <- discoverTestCategories baseDirectory
   -- Discover tests in each category
