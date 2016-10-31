@@ -47,7 +47,6 @@ import System.Exit
          ( ExitCode(..) )
 import Distribution.Compat.Exception
          ( catchIO, catchExit )
-import Control.Exception ( assert )
 import Control.Monad
          ( forM_, mapM )
 import System.Directory
@@ -1426,9 +1425,7 @@ installUnpackedPackage verbosity installLock numJobs
             ipkgs <- genPkgConfs mLogPath
             let ipkgs' = case ipkgs of
                             [ipkg] -> [ipkg { Installed.installedUnitId = uid }]
-                            _ -> assert (any ((== uid)
-                                              . Installed.installedUnitId)
-                                             ipkgs) ipkgs
+                            _ -> ipkgs
             let packageDBs = interpretPackageDbFlags
                                 (fromFlag (configUserInstall configFlags))
                                 (configPackageDBs configFlags)

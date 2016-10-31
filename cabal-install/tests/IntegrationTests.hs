@@ -12,7 +12,7 @@ import Distribution.Compat.CreatePipe (createPipe)
 import Distribution.Compat.Environment (setEnv, getEnvironment)
 import Distribution.Compat.Internal.TempFile (createTempDirectory)
 import Distribution.Simple.Configure (findDistPrefOrDefault)
-import Distribution.Simple.Program.Builtin (ghcPkgProgram)
+import Distribution.Simple.Program.Builtin (ghcPkgProgram, ghcProgram)
 import Distribution.Simple.Program.Db
         (defaultProgramDb, requireProgram, setProgramSearchPath)
 import Distribution.Simple.Program.Find
@@ -285,10 +285,12 @@ main = do
   let programSearchPath = ProgramSearchPathDir buildDir : defaultProgramSearchPath
   (cabal, _) <- requireProgram normal cabalProgram (setProgramSearchPath programSearchPath defaultProgramDb)
   (ghcPkg, _) <- requireProgram normal ghcPkgProgram defaultProgramDb
+  (ghc, _) <- requireProgram normal ghcProgram defaultProgramDb
   baseDirectory <- canonicalizePath $ "tests" </> "IntegrationTests"
   -- Set up environment variables for test scripts
   setEnv "GHC_PKG" $ programPath ghcPkg
   setEnv "CABAL" $ programPath cabal
+  setEnv "GHC" $ programPath ghc
   -- Define default arguments
   setEnv "CABAL_ARGS" $ "--config-file=config-file"
   setEnv "CABAL_ARGS_NO_CONFIG_FILE" " "
